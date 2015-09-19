@@ -11,6 +11,9 @@ import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -104,8 +107,28 @@ public class BeanTester {
     // }
 
     private Object getUniqueValueEnum(final Class<?> propertyType) {
-        List<?> enums = Arrays.asList(propertyType.getEnumConstants());
+        final List<?> enums = Arrays.asList(propertyType.getEnumConstants());
         return enums.get(getNextCounter() % enums.size());
+    }
+
+    private Object getUniqueValueInterface(final Class<?> propertyType) {
+        return Proxy.newProxyInstance(propertyType.getClassLoader(), new Class[] { propertyType }, new InvocationHandler() {
+            final String s = getUniqueString();
+
+            @Override
+            public Object invoke(final Object arg0, final Method method, final Object[] args) throws Throwable {
+
+                if ("equals".equals(method.getName())) {
+                    boolean res = (s.equals(args[0].toString()));
+                    return Boolean.valueOf(res);
+                }
+                if ("toString".equals(method.getName())) {
+                    return s;
+                }
+
+                throw new RuntimeException("unsupported method: " + method.getName());
+            }
+        });
     }
 
     private Object getUniqueValue(final Class<?> propertyType) {
@@ -120,27 +143,12 @@ public class BeanTester {
             return getUniqueValueNumber(propertyType);
         }
         if (propertyType.isInterface()) {
-            return Proxy.newProxyInstance(propertyType.getClassLoader(), new Class[] { propertyType }, new InvocationHandler() {
-                final String s = getUniqueString();
-
-                @Override
-                public Object invoke(Object arg0, Method method, Object[] args) throws Throwable {
-
-                    if ("equals".equals(method.getName())) {
-                        boolean res = (s.equals(args[0].toString()));
-                        return Boolean.valueOf(res);
-                    }
-                    if ("toString".equals(method.getName())) {
-                        return s;
-                    }
-
-                    throw new RuntimeException("unsupported method: " + method.getName());
-                }
-            });
+            return getUniqueValueInterface(propertyType);
         }
-//      if (Collection.class.isAssignableFrom(propertyType) || Map.class.isAssignableFrom(propertyType)) {
-//      return getUniqueValueCollection(propertyType);
-//  }
+        // // other collection types that are not defined per interface
+        // if (Collection.class.isAssignableFrom(propertyType) || Map.class.isAssignableFrom(propertyType)) {
+        // return getUniqueValueCollection(propertyType);
+        // }
         final Object value;
         if (propertyType.isAssignableFrom(String.class)) {
             value = getUniqueString();
@@ -166,10 +174,10 @@ public class BeanTester {
         pd.getWriteMethod().invoke(instance, new Object[] { value });
     }
 
-    private <T> Map<String, Object> getAllProperties(final Class<T> clazz, final T instance) throws IntrospectionException, IllegalAccessException,
-            IllegalArgumentException, InvocationTargetException {
-        return getAllPropertiesExcept(clazz, instance, null);
-    }
+    // private <T> Map<String, Object> getAllProperties(final Class<T> clazz, final T instance) throws IntrospectionException, IllegalAccessException,
+    // IllegalArgumentException, InvocationTargetException {
+    // return getAllPropertiesExcept(clazz, instance, null);
+    // }
 
     private <T> Map<String, Object> getAllPropertiesExcept(final Class<T> clazz, final T instance, final PropertyDescriptor except)
             throws IntrospectionException, IllegalAccessException, IllegalArgumentException, InvocationTargetException {
