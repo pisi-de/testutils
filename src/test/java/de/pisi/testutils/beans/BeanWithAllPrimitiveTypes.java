@@ -1,8 +1,6 @@
 package de.pisi.testutils.beans;
 
-import java.util.Set;
-
-public class BeanWithAllTypes {
+public class BeanWithAllPrimitiveTypes {
     private Double objectDouble;
     private Float objectFloat;
     private Integer objectInt;
@@ -12,15 +10,6 @@ public class BeanWithAllTypes {
     private int primitiveInt;
     private long primitiveLong;
     private String string;
-    private Set<Object> set;
-
-    public Set<Object> getSet() {
-        return set;
-    }
-
-    public void setSet(Set<Object> set) {
-        this.set = set;
-    }
 
     public Double getObjectDouble() {
         return objectDouble;

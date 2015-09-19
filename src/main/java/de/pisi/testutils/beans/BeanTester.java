@@ -4,9 +4,14 @@ import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -34,7 +39,10 @@ public class BeanTester {
             Object actual = getProperty(clazz, newInstance, pd);
             Assert.assertEquals("While testing property '" + propertyUnderTest + "': getter must return the data provided by the setter.", expected, actual);
             Map<String, Object> allOtherPropertiesAfter = getAllPropertiesExcept(clazz, newInstance, pd);
-            compareAllProperties(allOtherPropertiesBefore, allOtherPropertiesAfter, propertyUnderTest);
+            if (!allOtherPropertiesAfter.isEmpty()) {
+                // only check if there is anything else
+                compareAllProperties(allOtherPropertiesBefore, allOtherPropertiesAfter, propertyUnderTest);
+            }
         }
     }
 
@@ -62,7 +70,31 @@ public class BeanTester {
             value = new Integer(getNextCounter()).doubleValue();
         } else if (propertyType.isAssignableFrom(double.class)) {
             value = new Integer(getNextCounter()).doubleValue();
+        } else if (propertyType.isAssignableFrom(HashSet.class)) {
+            HashSet<Object> h = new HashSet<Object>();
+            h.add(new Object());
+            value = h;
+        } else if (propertyType.isAssignableFrom(LinkedList.class)) {
+            LinkedList<Object> l = new LinkedList<Object>();
+            l.add(new Object());
+            value = l;
+        } else if (propertyType.isAssignableFrom(HashMap.class)) {
+            HashMap<Object, Object> l = new HashMap<Object, Object>();
+            l.put(new Object(), new Object());
+            value = l;
         } else {
+            // value = java.lang.reflect.Proxy.newProxyInstance(propertyType.getClassLoader(), new Class[] { propertyType }, new InvocationHandler() {
+            //
+            // @Override
+            // public Object invoke(Object arg0, Method method, Object[] args) throws Throwable {
+            // // TODO Auto-generated method stub
+            // if (method.getName().equals("equals")){
+            // return method.invoke(arg0, args);
+            // }
+            //
+            // throw new RuntimeException("unsupported method type: " + method.getName());
+            // }
+            // });
             throw new RuntimeException("unsupported property type: " + propertyType);
         }
         return value;
