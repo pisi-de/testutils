@@ -4,13 +4,13 @@ import java.beans.BeanInfo;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
+import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Proxy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -82,26 +82,26 @@ public class BeanTester {
         return value;
     }
 
-    private Object getUniqueValueCollection(final Class<?> propertyType) {
-        final Object value;
-
-        if (propertyType.isAssignableFrom(HashSet.class)) {
-            HashSet<Object> h = new HashSet<Object>();
-            h.add(new Object());
-            value = h;
-        } else if (propertyType.isAssignableFrom(LinkedList.class)) {
-            LinkedList<Object> l = new LinkedList<Object>();
-            l.add(new Object());
-            value = l;
-        } else if (propertyType.isAssignableFrom(HashMap.class)) {
-            HashMap<Object, Object> l = new HashMap<Object, Object>();
-            l.put(new Object(), new Object());
-            value = l;
-        } else {
-            throw new RuntimeException("unsupported collection property type: " + propertyType);
-        }
-        return value;
-    }
+    // private Object getUniqueValueCollection(final Class<?> propertyType) {
+    // final Object value;
+    //
+    // if (propertyType.isAssignableFrom(HashSet.class)) {
+    // HashSet<Object> h = new HashSet<Object>();
+    // h.add(new Object());
+    // value = h;
+    // } else if (propertyType.isAssignableFrom(LinkedList.class)) {
+    // LinkedList<Object> l = new LinkedList<Object>();
+    // l.add(new Object());
+    // value = l;
+    // } else if (propertyType.isAssignableFrom(HashMap.class)) {
+    // HashMap<Object, Object> l = new HashMap<Object, Object>();
+    // l.put(new Object(), new Object());
+    // value = l;
+    // } else {
+    // throw new RuntimeException("unsupported collection property type: " + propertyType);
+    // }
+    // return value;
+    // }
 
     private Object getUniqueValueEnum(final Class<?> propertyType) {
         List<?> enums = Arrays.asList(propertyType.getEnumConstants());
@@ -113,23 +113,45 @@ public class BeanTester {
         if (propertyType.isEnum()) {
             return getUniqueValueEnum(propertyType);
         }
-        // TODO (propertyType.isInterface())
         if (propertyType.isPrimitive()) {
             return getUniqueValuePrimitive(propertyType);
-        }
-        if (Collection.class.isAssignableFrom(propertyType) || Map.class.isAssignableFrom(propertyType)) {
-            return getUniqueValueCollection(propertyType);
         }
         if (Number.class.isAssignableFrom(propertyType)) {
             return getUniqueValueNumber(propertyType);
         }
+        if (propertyType.isInterface()) {
+            return Proxy.newProxyInstance(propertyType.getClassLoader(), new Class[] { propertyType }, new InvocationHandler() {
+                final String s = getUniqueString();
+
+                @Override
+                public Object invoke(Object arg0, Method method, Object[] args) throws Throwable {
+
+                    if ("equals".equals(method.getName())) {
+                        boolean res = (s.equals(args[0].toString()));
+                        return Boolean.valueOf(res);
+                    }
+                    if ("toString".equals(method.getName())) {
+                        return s;
+                    }
+
+                    throw new RuntimeException("unsupported method: " + method.getName());
+                }
+            });
+        }
+//      if (Collection.class.isAssignableFrom(propertyType) || Map.class.isAssignableFrom(propertyType)) {
+//      return getUniqueValueCollection(propertyType);
+//  }
         final Object value;
         if (propertyType.isAssignableFrom(String.class)) {
-            value = "String" + getNextCounter();
+            value = getUniqueString();
         } else {
             throw new RuntimeException("unsupported property type: " + propertyType);
         }
         return value;
+    }
+
+    private String getUniqueString() {
+        return "String" + getNextCounter();
     }
 
     private <T> void setAllProperties(final Class<T> clazz, final T instance) throws IntrospectionException, IllegalAccessException, IllegalArgumentException,
